@@ -1,0 +1,38 @@
+name: Export Postman collection and convert the connection to openAPI Spec
+
+on:
+  # push:
+    # branches: main
+  pull_request:
+    branches: [maunally-run-this-workflow]
+
+jobs:
+  export-collection:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+        
+    - name: Download Postman collection
+      run: curl -X GET "https://api.postman.com/collections/27420157-ebf02734-ad4b-4a7a-bf89-76d6e8543155?access_key=${{ secrets.POSTMAN_API_KEY }}" -o "admin-api-collection.json"
+
+    - name: Convert Postman Collection to OpenAPI spec
+      run: |
+        npm install -g postman-to-openapi
+        p2o admin-api-collection.json -f admin-api-open-api.yml
+        
+    - name: Move collection file
+      run: |
+        mkdir -p open-api-specs
+        mv admin-api-open-api.yml open-api-specs/APISIX_Admin_API_V3.0.yml
+        
+    - name: Commit changes
+      run: |
+        git config --local user.email "actions@github.com"
+        git config --local user.name "Github Action"
+        git add open-api-specs/APISIX_Admin_API_V3.0.yml
+        git commit -m "Update APISIX Admin API Open API Spec"
+        git push
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
